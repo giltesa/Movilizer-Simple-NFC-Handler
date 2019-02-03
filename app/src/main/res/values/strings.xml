@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">NFC Simple</string>
+    <string name="toast_nfc_not_available">NFC not available</string>
+    <string name="toast_nfc_disabled">You need to enable NFC</string>
+    <string name="toast_fatal_error">The input parameters caused an exception, check the invocation of the NFC.</string>
+    <string name="toast_event_id_field_missing">The field "EVENT_ID" is mandatory and must have the integer value.</string>
+</resources>
