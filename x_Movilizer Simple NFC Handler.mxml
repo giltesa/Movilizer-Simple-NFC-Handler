@@ -1,0 +1,130 @@
+<MovilizerRequest systemId="${#Project#SystemID}" systemPassword="${#Project#Password}" xmlns="http://movilitas.com/movilizer/v16">
+
+
+    <moveletDelete moveletKey="SCN_NFC_SIMPLE" />
+
+
+    <moveletSet>
+
+
+        <movelet moveletKey="SCN_NFC_SIMPLE" moveletType="MULTI" initialQuestionKey="SCR_FORM" transactional="true" priority="-2">
+
+
+            <question key="SCR_FORM" type="5" title="Movilizer NFC Handler" labelFontStyle="BOLD">
+
+
+                <answer key="ANS_FORM_NFC_ID" nextQuestionKey="CANCEL" attributeType="-128" position="1" columnSizeType="ROWS">
+                    <text>NFC ID:</text>
+                </answer>
+
+                <answer key="ANS_FORM_BTN_READ_TAG" nextQuestionKey="CANCEL" attributeType="14" position="2" columnSizeType="ROWS" labelAlignment="CENTER" onScreenValueChangeEventTrigger="SYNCHRONOUS">
+                    <text>Press to read the Tag</text>
+                </answer>
+
+
+                <validation type="ERROR">
+                    <condition>isBlank(nfcID)</condition>
+                    <text>Read the Tag to continue!</text>
+                </validation>
+
+
+                <onEnterAssignment>
+                    nfcID = null;
+                </onEnterAssignment>
+
+
+                <onLeaveOkPrepareAssignment>
+                    call($local:disconnectNFC)();
+
+                    nfcID = getAnswerValueByClientKey($answer:"ANS_FORM_NFC_ID", null);
+                </onLeaveOkPrepareAssignment>
+
+
+                <onLeaveBackAssignment>
+                    call($local:disconnectNFC)();
+                </onLeaveBackAssignment>
+
+
+                <onScreenValueChangeEvent>
+                    function( $ref:answerKey, $ref:clientKey, $ref:value, $ref:data )
+                    {
+                        if( answerKey == $answer:"ANS_FORM_BTN_READ_TAG" )
+                        {
+                            call($local:connectNFC)();
+                        }
+                    }
+                </onScreenValueChangeEvent>
+
+
+                <onExternalEvent>
+                    function( $ref:evtSrc, $ref:data )
+                    {
+                        if( evtSrc == $local:eventID )
+                        {
+                            value = data["ID"];  <!-- Decimal value -->
+
+                            if( isBlank(value) )
+                            {
+                                text = "The read value is not valid";
+                            }
+                            else
+                            {
+                                setAnswerValueByClientKey($answer:"ANS_FORM_NFC_ID", null, value);
+                            }
+
+                            call($local:disconnectNFC)();
+                        }
+                    }
+                </onExternalEvent>
+
+            </question>
+
+
+
+            <syncDownloadAssignment>
+                $local:connectNFC = function()
+                {
+                    $local:eventID = 1234;
+
+                    package      = "com.giltesa.nfcsimple";
+                    parameters   = {
+                                     "EVENT_ID"       : $local:eventID ;   <!-- Number: (mandatory) -->
+                                     "EVENT_TYPE"     : 0                  <!-- Number: 0=Synchronous(default) | 1=Asynchronous Guaranteed | 2=Asynchronous -->
+                                   };
+                    intentURL    = concat("%", package, "%", objectToJson(parameters));
+                    $local:conID = connect(concat("exec:", intentURL), "name");
+
+                    if( !isConnectionOpen($local:conID) )
+                    {
+                        showProgress("Connection error!");
+                        sleep(3000);
+                    }
+                    else
+                    {
+                        subscribeExternalEventId($local:eventID);
+                    }
+                };
+
+
+                $local:disconnectNFC = function()
+                {
+                    if( isConnectionOpen($local:conID) )
+                    {
+                        unsubscribeExternalEventId($local:eventID);
+                        close($local:conID);
+                    }
+                };
+            </syncDownloadAssignment>
+
+
+
+            <name>NFC Simple</name>
+        </movelet>
+
+
+        <participant participantKey="Test1" name="Test1" deviceAddress="${#Project#Participant}" />
+
+    </moveletSet>
+
+
+</MovilizerRequest>
